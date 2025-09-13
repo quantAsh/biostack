@@ -1,0 +1,28 @@
+import React from 'react';
+import { Category } from '../types';
+
+interface CategoryIconProps {
+  category: Category;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export const CategoryIcon: React.FC<CategoryIconProps> = ({ category, className = 'w-6 h-6', style }) => {
+  const icons: { [key in Category]: React.ReactNode } = {
+    [Category.Fasting]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
+    [Category.ColdExposure]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="2" x2="12" y2="22"></line><line x1="17" y1="5" x2="7" y2="15"></line><line x1="7" y1="5" x2="17" y2="15"></line><line x1="22" y1="12" x2="2" y2="12"></line><line x1="19" y1="17" x2="5" y2="7"></line><line x1="5" y1="17" x2="19" y2="7"></line></svg>,
+    [Category.Breathwork]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h3.5a5.5 5.5 0 0 1 0 11H3"></path><path d="M21 12h-3.5a5.5 5.5 0 0 0 0-11H21"></path></svg>,
+    [Category.Movement]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 4s-1-2-4-2-4 2-4 2v11s1-1 4-1 4 1 4 1V4z"></path><path d="M4 20h12.5"></path><path d="M13 4v11"></path><circle cx="6" cy="4" r="2"></circle></svg>,
+    [Category.Sleep]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>,
+    [Category.Mindfulness]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path><path d="M12 12v.01"></path><path d="M12 6v.01"></path><path d="M12 18v.01"></path><path d="M6 12h.01"></path><path d="M18 12h.01"></path></svg>,
+    [Category.Nutrition]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 17.5c-2.49 2.49-6.51 2.49-9 0s-2.49-6.51 0-9 6.51-2.49 9 0"></path><path d="M15 8c.66 0 1.32.27 1.77.73.45.45.73 1.11.73 1.77 0 .66-.27 1.32-.73 1.77-.45-.45-1.11.73-1.77.73-.66 0-1.32-.27-1.77-.73-.45-.45-.73-1.11-.73-1.77 0-.66.27-1.32.73-1.77.45-.45 1.11-.73 1.77-.73z"></path><path d="M9 16c.66 0 1.32-.27 1.77-.73.45-.45.73-1.11.73-1.77 0-.66-.27-1.32-.73-1.77-.45-.45-1.11-.73-1.77-.73-.66 0-1.32.27-1.77-.73-.45-.45-.73-1.11-.73-1.77 0-.66.27-1.32.73-1.77.45-.45 1.11-.73 1.77-.73z"></path><path d="M22 22L18 18"></path></svg>,
+    [Category.StressManagement]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
+    [Category.Light]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>,
+    [Category.Sound]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0"></path><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path></svg>,
+    [Category.Longevity]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.15 2.15A5.63 5.63 0 005.8 5.8a5.63 5.63 0 000 8.4 5.63 5.63 0 008.4 0 5.63 5.63 0 000-8.4c-2-2-4.1-2.4-5.05-2.65"></path><path d="M13.85 21.85a5.63 5.63 0 004.35-3.25 5.63 5.63 0 000-8.4 5.63 5.63 0 00-8.4 0c1.9 1.9 2.3 4.1 2.65 5.05"></path></svg>,
+    [Category.Cognitive]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 00-3.9 19.4"></path><path d="M14 6a2 2 0 11-4 0 2 2 0 014 0z"></path><path d="M16.5 11a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path><path d="M18 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path d="M12 2a10 10 0 013.9 19.4"></path></svg>,
+    [Category.Energy]: <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>,
+  };
+
+  return icons[category] || null;
+};

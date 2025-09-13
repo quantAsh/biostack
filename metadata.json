@@ -1,0 +1,9 @@
+{
+  "name": "BiohackStack",
+  "description": "Collect and stack biohacking protocols to create your perfect routine. Add cards to your stack and implement accessible biohacking techniques.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "prompt": ""
+}
