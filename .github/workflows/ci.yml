@@ -28,16 +28,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Run unit tests
+      - name: Run unit tests (if present)
+        # Run tests only if a 'test' script is defined in package.json. This avoids failing the job when no tests are configured.
         run: |
-          if npm run | grep -q vitest; then
-            npm run test || echo "No tests configured or tests failed"
-          else
-            echo "Vitest not configured"
-          fi
+          npm run test --if-present
 
       - name: Upload build artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist || build || .
+          path: dist
