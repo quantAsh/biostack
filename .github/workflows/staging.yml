@@ -28,9 +28,11 @@ jobs:
           nohup http-server ./dist -p 3000 -c-1 &
           sleep 2
 
-      - name: Run Playwright smoke tests
+      - name: Prepare and run Playwright smoke tests
         run: |
-          npm install --no-audit --no-fund
+          # install Playwright browsers/deps (uses the @playwright/test already installed in devDependencies)
+          npx playwright install --with-deps
+          # run playwright tests against the served dist
           npx playwright test --config=playwright.config.ts --reporter=list
 
       - name: Optional: Deploy to Firebase
