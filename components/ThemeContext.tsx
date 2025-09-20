@@ -1,4 +1,4 @@
-import React, { createContext, useState, useMemo, useContext } from 'react';
+import React, { createContext, useState, useMemo, useContext, useCallback } from 'react';
 import { Theme } from '../types';
 
 interface ThemeContextType {
@@ -9,9 +9,17 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>('classic');
+  const [theme, setThemeInternal] = useState<Theme>('classic');
 
-  const value = useMemo(() => ({ theme, setTheme }), [theme]);
+  // Guarded setter: no-op when requested theme equals current theme to avoid redundant updates
+  const setTheme = useCallback((t: Theme) => {
+    setThemeInternal(prev => {
+      if (prev === t) return prev;
+      return t;
+    });
+  }, [setThemeInternal]);
+
+  const value = useMemo(() => ({ theme, setTheme }), [theme, setTheme]);
 
   return (
     <ThemeContext.Provider value={value}>

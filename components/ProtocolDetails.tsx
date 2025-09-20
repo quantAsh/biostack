@@ -4,18 +4,38 @@ import CardGraphic from './CardGraphic';
 import { CategoryIcon } from './CategoryIcon';
 import { useUIStore } from '../stores/uiStore';
 import { useTheme } from './ThemeContext';
+import { useEffect } from 'react';
 import { useDataStore } from '../stores/dataStore';
 
 
 const ProtocolDetails: React.FC = () => {
-  const { detailedProtocol, closeDetails, isDetailsFullScreen } = useUIStore(state => ({
-    detailedProtocol: state.detailedProtocol,
-    closeDetails: state.closeDetails,
-    setView: state.setView,
-    isDetailsFullScreen: state.isDetailsFullScreen,
-  }));
+  // Use individual selectors to avoid recreating an object on every store change
+  const detailedProtocol = useUIStore(state => state.detailedProtocol);
+  const closeDetails = useUIStore(state => state.closeDetails);
+  const isDetailsFullScreen = useUIStore(state => state.isDetailsFullScreen);
   const { communityStacks, journeys } = useDataStore();
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
+
+  // Apply protocol theme when details open. Use effect so we don't set state during render
+  // and avoid infinite update loops. Capture previous theme in a ref and restore on unmount.
+  const prevThemeRef = React.useRef<null | string>(null);
+  useEffect(() => {
+    if (!detailedProtocol) return;
+    const protocolTheme = (detailedProtocol as any).theme;
+    if (protocolTheme && protocolTheme !== theme) {
+      // Capture previous theme once
+      prevThemeRef.current = theme;
+      setTheme(protocolTheme);
+    }
+    return () => {
+      if (prevThemeRef.current) {
+        setTheme(prevThemeRef.current as any);
+        prevThemeRef.current = null;
+      }
+    };
+    // We intentionally omit `theme` from deps to avoid re-running when the theme changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailedProtocol?.id, setTheme]);
 
   if (!detailedProtocol) return null;
 

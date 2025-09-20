@@ -10,6 +10,7 @@ import ProductEditorModal from './ProductEditorModal';
 import GiftProductModal from './GiftProductModal';
 import GrowthEngineDashboard from './GrowthEngineDashboard';
 import FeaturedContentManager from './FeaturedContentManager';
+import BlogAdminPanel from './BlogAdminPanel';
 import SeoEditorModal from './SeoEditorModal';
 import UserSegmentModal from './UserSegmentModal';
 import DirectMessageModal from './DirectMessageModal';
@@ -54,6 +55,19 @@ const UserGrowthChart: React.FC = () => {
     );
 };
 
+// Dev-only: expose a global flag when AdminPanel mounts so headless tests can detect lazy load
+function markAdminLoaded() {
+    try {
+        if (typeof window !== 'undefined' && import.meta.env?.DEV) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            window.__ADMIN_PANEL_LOADED__ = true;
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
 const TopCommunityStacks: React.FC<{ communityStacks: CommunityStack[] }> = ({ communityStacks }) => {
     const topStacks = [...communityStacks].sort((a,b) => b.upvotes - a.upvotes).slice(0, 3);
     return (
@@ -89,6 +103,9 @@ const AnalyticsContent: React.FC = () => {
 };
 
 const AdminPanel: React.FC = () => {
+    useEffect(() => {
+        markAdminLoaded();
+    }, []);
     const queryClient = useQueryClient();
     const { 
         protocols, allUsers, communityStacks, deleteCommunityStack, 
@@ -178,6 +195,7 @@ const AdminPanel: React.FC = () => {
          const communityProtocols = protocols.filter(p => p.isCommunity);
          return (
             <div className="space-y-8">
+                <BlogAdminPanel />
                 <div>
                     <h4 className="font-semibold text-white mb-2">Community Submitted Protocols ({communityProtocols.length})</h4>
                     <div className="overflow-x-auto max-h-96 custom-scrollbar">

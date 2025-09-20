@@ -531,6 +531,24 @@ export interface ResearchBounty {
   } | null;
 }
 
+// Blog / Content Marketing Types
+export interface BlogPost {
+  id: string; // uuid or firestore doc id
+  slug: string; // url slug
+  title: string;
+  subtitle?: string;
+  description?: string; // meta description
+  body: string; // markdown content
+  keywords?: string[];
+  author?: string;
+  publishedAt?: any; // Date or Firestore timestamp
+  updatedAt?: any; // Date or Firestore timestamp
+  isDraft?: boolean;
+  // Optional SEO overrides
+  metaTitle?: string;
+  metaDescription?: string;
+}
+
 // Data Vault Types
 export interface SealedDataVault {
   id: string;
@@ -1017,6 +1035,7 @@ export interface UIState {
   // Walkthrough State
   isWalkthroughActive: boolean;
   walkthroughStep: number;
+  onboardingStep?: number;
   walkthroughContext?: { primaryGoal: string };
   isSandboxMode: boolean;
   // Tip HUD State

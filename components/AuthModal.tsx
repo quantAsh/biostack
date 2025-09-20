@@ -6,7 +6,9 @@ const AuthModal: React.FC = () => {
   const isAuthModalOpen = useUIStore((state) => state.isAuthModalOpen);
   const closeAuthModal = useUIStore((state) => state.closeAuthModal);
   const { signInWithGoogle, signInWithWallet, signInAsSuperUser, signInAsNewUser } = useUserStore();
+  const { signInWithGithub } = useUserStore();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isGithubLoading, setIsGithubLoading] = useState(false);
   const [isWalletLoading, setIsWalletLoading] = useState(false);
   const [isSimLoading, setIsSimLoading] = useState(false);
   const [isNewUserLoading, setIsNewUserLoading] = useState(false);
@@ -17,6 +19,12 @@ const AuthModal: React.FC = () => {
     setIsGoogleLoading(true);
     await signInWithGoogle();
     setIsGoogleLoading(false);
+  };
+
+  const handleGithubSignIn = async () => {
+    setIsGithubLoading(true);
+    await signInWithGithub();
+    setIsGithubLoading(false);
   };
 
   const handleWalletSignIn = async () => {
@@ -77,6 +85,11 @@ const AuthModal: React.FC = () => {
                 <path d="M24 9.8c3.52 0 6.66 1.22 9.15 3.6l6.27-6.26C35.91 2.2 30.5 0 24 0 14.13 0 5.83 6.27 1.9 15.5l7.54 5.66c2.04-6.1 7.79-10.66 14.56-10.66z" fill="#EA4335"/>
             </svg>
             <span>Continue with Google</span>
+          </AuthButton>
+
+          <AuthButton onClick={handleGithubSignIn} isLoading={isGithubLoading} provider="Google">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.33.95.1-.75.4-1.24.73-1.53-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.9 10.9 0 012.87-.39c.98.01 1.97.13 2.87.39 2.18-1.5 3.14-1.18 3.14-1.18.62 1.58.23 2.75.11 3.04.73.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.41-5.27 5.69.41.36.77 1.08.77 2.17 0 1.57-.01 2.83-.01 3.22 0 .31.21.68.8.56A11.51 11.51 0 0023.5 12C23.5 5.73 18.27.5 12 .5z"/></svg>
+            <span>Continue with GitHub</span>
           </AuthButton>
 
           <div className="flex items-center">

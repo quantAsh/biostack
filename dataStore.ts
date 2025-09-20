@@ -1,23 +1,24 @@
 import { create } from 'zustand';
-import { Protocol, CommunityStack, Difficulty, PromoCode, PublicUserProfile, KairosDataPoint, PlatformAnnouncement, Journey, Achievement, Mission, Badge, PlatformConfig, WeeklyMission, FeaturedContent, ResearchBounty, Product, UserFunnelSegment, Gift, Feedback, Order, Coupon, UserSegment, Campaign, ABTest, SocialIntegration, MailingListStats, MailingListEntry, Category, ChallengeCard } from '../types';
-import { db, isFirebaseEnabled } from '../services/firebase';
+// NOTE: This file appears to be a legacy/lightweight store. Imports adjusted to be local so TypeScript stops erroring.
+import { Protocol, CommunityStack, Difficulty, PromoCode, PublicUserProfile, KairosDataPoint, PlatformAnnouncement, Journey, Achievement, Mission, Badge, PlatformConfig, WeeklyMission, FeaturedContent, ResearchBounty, Product, UserFunnelSegment, Gift, Feedback, Order, Coupon, UserSegment, Campaign, ABTest, SocialIntegration, MailingListStats, MailingListEntry, Category, ChallengeCard, BlogPost } from './types';
+import { db, isFirebaseEnabled } from './services/firebase';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
-import { protocols as mockProtocols } from '../data/protocols';
-import { communityStacks as mockCommunityStacks } from '../data/community';
-import { kairosCollectiveData as mockKairosData } from '../data/kairosCollective';
-import { journeys as mockJourneys } from '../data/journeys';
-import { achievements as mockAchievements } from '../data/achievements';
-import { missions as mockMissions, badges as mockBadges } from '../data/missions';
-import { mockResearchBounties } from '../data/bounties';
-import { mockProducts } from '../data/products';
-import { mockOrders } from '../data/orders';
-import { mockABTests } from '../data/abtests';
-import { useUserStore } from './userStore';
-import { log } from './logStore';
-import { getLevelFromXp } from '../constants';
+import { protocols as mockProtocols } from './data/protocols';
+import { communityStacks as mockCommunityStacks } from './data/community';
+import { kairosCollectiveData as mockKairosData } from './data/kairosCollective';
+import { journeys as mockJourneys } from './data/journeys';
+import { achievements as mockAchievements } from './data/achievements';
+import { missions as mockMissions, badges as mockBadges } from './data/missions';
+import { mockResearchBounties } from './data/bounties';
+import { mockProducts } from './data/products';
+import { mockOrders } from './data/orders';
+import { mockABTests } from './data/abtests';
+import { useUserStore } from './stores/userStore';
+import { log } from './stores/logStore';
+import { getLevelFromXp } from './constants';
 import toast from 'react-hot-toast';
-import { challengeCards as mockChallengeCards } from '../data/challenges';
+import { challengeCards as mockChallengeCards } from './data/challenges';
 
 
 interface DataState {
@@ -46,6 +47,7 @@ interface DataState {
   mailingListStats: MailingListStats;
   mailingList: MailingListEntry[];
   challengeCards: ChallengeCard[];
+    blogPosts: BlogPost[];
   fetchData: () => Promise<void>;
   fetchAllUsers: () => Promise<void>;
   updateStackVote: (id: string, direction: 'up' | 'down') => Promise<void>;
@@ -92,6 +94,11 @@ interface DataState {
   sendEmailBlast: (subject: string, body: string) => Promise<void>;
   addToMailingList: (email: string) => Promise<void>;
   addForgedProtocol: (newNftProtocol: Protocol, baseProtocolId: string) => Promise<void>;
+    // Blog CRUD
+    createBlogPost: (data: Omit<BlogPost, 'id' | 'slug' | 'publishedAt' | 'updatedAt'> & { slug?: string }) => void;
+    updateBlogPost: (id: string, data: Partial<Omit<BlogPost, 'id'>>) => void;
+    deleteBlogPost: (id: string) => void;
+    publishBlogPost: (id: string) => void;
 }
 
 const generateBioScore = (p: Partial<Protocol>): number => {
@@ -157,6 +164,9 @@ export const useDataStore = create<DataState>((set, get) => ({
     { email: 'earlyadopter@example.com', subscribedAt: new Date(Date.now() - 86400000) },
   ],
   challengeCards: [],
+    blogPosts: [
+        { id: 'draft-welcome', slug: 'welcome-to-biostack', title: 'Welcome to Biostack', body: 'Initial draft post. Edit this in the Admin panel.', description: 'Welcome introduction draft.', keywords: ['intro'], author: 'System', isDraft: true }
+    ],
 
   fetchData: async () => {
     log('INFO', 'fetchData: Starting data fetch.');
@@ -1231,4 +1241,24 @@ export const useDataStore = create<DataState>((set, get) => ({
         }
     }
   },
+    createBlogPost: (data) => {
+        const id = `post_${Date.now()}`;
+        const slugSource = data.slug || data.title || id;
+        const slug = slugSource.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+        const now = new Date();
+        set(state => ({ blogPosts: [...state.blogPosts, { id, slug, publishedAt: data.isDraft ? undefined : now, updatedAt: now, ...data }] }));
+        toast.success('Blog post created');
+    },
+    updateBlogPost: (id, data) => {
+        set(state => ({ blogPosts: state.blogPosts.map(p => p.id === id ? { ...p, ...data, updatedAt: new Date() } : p) }));
+        toast.success('Blog post updated');
+    },
+    deleteBlogPost: (id) => {
+        set(state => ({ blogPosts: state.blogPosts.filter(p => p.id !== id) }));
+        toast.success('Blog post deleted');
+    },
+    publishBlogPost: (id) => {
+        set(state => ({ blogPosts: state.blogPosts.map(p => p.id === id ? { ...p, isDraft: false, publishedAt: p.publishedAt || new Date(), updatedAt: new Date() } : p) }));
+        toast.success('Blog post published');
+    },
 }));

@@ -7,9 +7,17 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "landing:dev": "vite --config vite.config.landing.ts",
+    "landing:build": "vite build --config vite.config.landing.ts --outDir dist-landing",
     "test": "vitest run",
-    "test:e2e": "playwright test",
-    "serve:dist": "http-server ./dist -p 3000 -c-1"
+  "test:e2e": "playwright test",
+  "test:e2e:ci": "npx playwright install --with-deps && playwright test --reporter=list",
+  "dev:ci": "vite --host 127.0.0.1 --port 5173 --strictPort",
+  "e2e:local": "npx start-server-and-test \"npm run dev:ci\" http://127.0.0.1:5173 \"npx playwright test\"",
+  "e2e:prod": "npx vite build && node scripts/e2e-prod-run.cjs",
+    "test:integration:emulator": "node -e \"if (!process.env.FIRESTORE_EMULATOR_HOST) { console.error('Set FIRESTORE_EMULATOR_HOST to run emulator integration tests'); process.exit(1) } else { require('child_process').execSync('vitest run tests/dataStore.integration.test.ts', { stdio: 'inherit' }) }\"",
+    "serve:dist": "http-server ./dist -p 3000 -c-1",
+    "sitemap:serve": "node server.js"
   },
   "dependencies": {
     "@google/genai": "^1.11.0",
@@ -25,10 +33,12 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "jsdom": "^23.0.0",
     "@playwright/test": "^1.40.0",
+    "@types/node": "^22.14.0",
+    "firebase-tools": "^14.16.0",
     "http-server": "^14.1.1",
+    "jsdom": "^23.0.0",
+    "start-server-and-test": "^2.1.1",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

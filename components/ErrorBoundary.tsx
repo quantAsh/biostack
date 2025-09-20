@@ -10,7 +10,11 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
+  // Explicitly declare props and setState so TypeScript understands the class shape
+  public props!: Props;
+  public setState!: React.Component<Props, State>["setState"];
+
   public state: State = {
     hasError: false,
     error: null,

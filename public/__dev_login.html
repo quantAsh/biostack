@@ -1,0 +1,70 @@
+<!-- Dev-only auto-login helper
+     Usage:
+     Open /__dev_login.html?uid=dev-user&name=Dev%20Tester&anon=false
+     This page will set localStorage key `biostack_session_v1` and redirect to the app root.
+     Important: This file must only be used in development. It intentionally stores no secrets.
+-->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dev Auto Login</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial; padding: 2rem; }
+    .box { max-width: 700px; margin: 2rem auto; }
+    pre { background:#f6f8fa; padding:1rem; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Dev Auto Login</h1>
+    <p>This page will set a dev session in <code>localStorage</code> and redirect back to the app root.</p>
+    <p>Query params supported:</p>
+    <ul>
+      <li><code>uid</code> (default: <code>dev-user</code>)</li>
+      <li><code>name</code> (default: <code>Dev Tester</code>)</li>
+      <li><code>anon</code> (default: <code>false</code>) — set to <code>true</code> for anonymous users</li>
+      <li><code>redirect</code> (default: <code>/</code>)</li>
+    </ul>
+    <p>Example:</p>
+    <pre>/__dev_login.html?uid=dev&name=Dev%20Tester&anon=false</pre>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    (function(){
+      function qs() {
+        var q = {};
+        location.search.replace(/^\?/,'').split('&').forEach(function(kv){
+          if(!kv) return;
+          var parts = kv.split('=');
+          q[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1] || '');
+        });
+        return q;
+      }
+
+      var params = qs();
+      var uid = params.uid || 'dev-user';
+      var name = params.name || 'Dev Tester';
+      var anon = params.anon === 'true' || params.anon === true ? true : false;
+      var redirect = params.redirect || '/';
+
+      var session = {
+        uid: uid,
+        displayName: name,
+        isAnonymous: anon,
+        ts: Date.now()
+      };
+
+      try {
+        localStorage.setItem('biostack_session_v1', JSON.stringify(session));
+        document.getElementById('status').innerText = 'Wrote session to localStorage as biostack_session_v1 — redirecting to ' + redirect;
+        setTimeout(function(){ location.href = redirect; }, 800);
+      } catch (e) {
+        document.getElementById('status').innerText = 'Failed to write localStorage: ' + e.message;
+      }
+    })();
+  </script>
+</body>
+</html>

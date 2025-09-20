@@ -1,5 +1,6 @@
 import React from 'react';
 import { Protocol, Theme } from '../types';
+import PROTOCOL_ASSETS from '../data/protocol-assets';
 import { CATEGORY_DETAILS } from '../constants';
 
 interface CardGraphicProps {
@@ -119,15 +120,17 @@ const CardGraphic: React.FC<CardGraphicProps> = ({ protocol, theme }) => {
     );
   }
 
+  const isAnatomical = categories && categories.some((c: string) => /anatom/i.test(c));
+  const fallbackAnatomical = '/assets/digitaltwin.jpeg';
   const DigitalHumanGraphic = () => (
     <>
-      {imageUrl ? (
-        <img src={imageUrl} alt={protocol.name} className="w-full h-full object-cover"/>
+      {((PROTOCOL_ASSETS[id] || imageUrl || isAnatomical) ? (
+        <img src={PROTOCOL_ASSETS[id] || imageUrl || fallbackAnatomical} alt={protocol.name} className="w-full h-full object-cover"/>
       ) : (
          <div className="w-full h-full bg-gray-900 flex items-center justify-center">
             <p className="text-gray-600 text-sm">No Image</p>
         </div>
-      )}
+      ))}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
        <div 
         className="absolute inset-0 opacity-10"
@@ -151,7 +154,10 @@ const CardGraphic: React.FC<CardGraphicProps> = ({ protocol, theme }) => {
 
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center">
-      {renderGraphic()}
+        {renderGraphic()}
+        <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ transform: `translate(calc(var(--mouse-x, 50%) - 50%) , calc(var(--mouse-y, 50%) - 50%))`, transition: 'transform 0.12s linear' }}>
+          <div className="w-full h-full bg-gradient-to-b from-transparent to-black/30 mix-blend-overlay" />
+        </div>
     </div>
   );
 };

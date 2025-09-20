@@ -152,15 +152,16 @@ export const useUIStore = create<UIState>((set, get) => ({
   })),
 
   onboardUser: () => {
-    set({ showOnboarding: true, onboardingStep: 0 });
+    set((state): Partial<UIState> => ({ showOnboarding: true, onboardingStep: 0 }));
   },
 
   nextOnboardingStep: () => {
-    set(state => {
-      if (state.onboardingStep < 2) {
-        return { onboardingStep: state.onboardingStep + 1 };
+    set((state) => {
+      const current = (state as UIState).onboardingStep ?? 0;
+      if (current < 2) {
+        return { onboardingStep: current + 1 } as Partial<UIState>;
       }
-      return { showOnboarding: false };
+      return { showOnboarding: false } as Partial<UIState>;
     });
   },
 

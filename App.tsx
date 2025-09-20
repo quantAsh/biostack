@@ -10,7 +10,7 @@ import SubmitProtocolModal from './components/SubmitProtocolModal';
 import UpgradeModal from './components/UpgradeModal';
 import LoadingScreen from './components/LoadingScreen';
 import AuthModal from './components/AuthModal';
-import AdminPanel from './components/AdminPanel';
+const LazyAdminPanel = React.lazy(() => import('./components/AdminPanel'));
 import UserProfileModal from './components/UserProfileModal';
 import KaiPanel from './components/KaiPanel';
 import ExplorePanel from './components/ExplorePanel';
@@ -38,6 +38,8 @@ import CampaignLandingPage from './components/public/CampaignLandingPage';
 import { useQuery } from '@tanstack/react-query';
 import GuidedWalkthrough from './components/GuidedWalkthrough';
 import ArGuideModal from './components/ArGuideModal';
+import './landing.css';
+import BlogPage from './components/public/BlogPage';
 import StakeOnUserModal from './components/StakeOnUserModal';
 
 
@@ -70,11 +72,23 @@ const App: React.FC = () => {
             const slug = path.substring(3);
             return campaigns.find(c => c.slug === slug);
         }
+        // Support preview via ?campaignPreview=1 if no path-based campaign
+        try {
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('campaignPreview') === '1') {
+            return {
+              id: 'preview',
+              slug: 'preview',
+              name: 'Biostack — launch waitlist',
+              protocolIds: [],
+            } as any;
+          }
+        } catch (_) { /* ignore */ }
         return null;
     },
-    enabled: (!user || user.isAnonymous) && campaigns.length > 0,
+    enabled: (!user || user.isAnonymous) && (campaigns.length > 0 || window.location.search.includes('campaignPreview=1')),
   });
-
+  
   useEffect(() => {
     if (platformAnnouncement?.isActive) {
         setIsAnnouncementVisible(true);
@@ -127,20 +141,24 @@ const App: React.FC = () => {
 
   
   const renderContent = () => {
-    if (isMobile) {
-        switch (view) {
+  if (isMobile) {
+    switch (view) {
             case 'explore': return <MobileExploreView />;
             case 'kai': return <KaiPanel />;
             case 'my-stack-lab': return <MyStackLabPanel />;
             case 'store': return <StorePanel />;
             case 'arena': return <ArenaPanel />;
             case 'settings': return <SettingsPanel />;
-            case 'admin': return <AdminPanel />;
+            case 'admin': return (
+                <React.Suspense fallback={<LoadingScreen />}>
+                  <LazyAdminPanel />
+                </React.Suspense>
+            );
             default: return <MobileExploreView />; // Default to explore on mobile
         }
     }
     
-    switch(view) {
+  switch(view) {
         case 'kai':
             return <KaiPanel />;
         case 'explore':
@@ -151,10 +169,14 @@ const App: React.FC = () => {
             return <StorePanel />;
         case 'arena':
             return <ArenaPanel />;
-        case 'settings':
-            return <SettingsPanel />;
-        case 'admin':
-            return <AdminPanel />;
+    case 'settings':
+      return <SettingsPanel />;
+    case 'admin':
+      return (
+        <React.Suspense fallback={<LoadingScreen />}>
+          <LazyAdminPanel />
+        </React.Suspense>
+      );
         default:
             return null;
     }
@@ -165,6 +187,16 @@ const App: React.FC = () => {
   }
 
   if (!user) {
+    const path = window.location.pathname;
+    if (path.startsWith('/blog')) {
+      return (
+        <>
+          <BlogPage />
+          {isAuthModalOpen && <AuthModal />}
+          <Toaster />
+        </>
+      );
+    }
     return (
       <>
         {campaign ? <CampaignLandingPage campaign={campaign} /> : <PublicWaitlistPage />}

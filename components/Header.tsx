@@ -95,7 +95,7 @@ const Header: React.FC = () => {
         <button onClick={handleLogoClick} className="flex items-center space-x-3 text-left">
           <Logo className="text-gray-200" />
           <h1 className="font-title text-2xl md:text-3xl font-extrabold text-gray-100 tracking-tighter hidden sm:block">
-            BiohackStack
+            biostack
           </h1>
         </button>
       </div>

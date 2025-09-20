@@ -51,7 +51,7 @@ const OnboardingModal: React.FC = () => {
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-4">
       <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-2xl text-white p-8">
-        <h1 className="font-title text-4xl font-extrabold text-cyan-300 mb-2">Welcome to BiohackStack!</h1>
+  <h1 className="font-title text-4xl font-extrabold text-cyan-300 mb-2">Welcome to biostack!</h1>
         <p className="text-gray-400 mb-6">Let's personalize your experience. What are your primary goals? (Select up to 3)</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">

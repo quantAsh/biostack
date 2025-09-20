@@ -53,12 +53,12 @@ const DigitalTwinView: React.FC = () => {
         <div className="hud-panel blueprint-bg digital-twin-viewport h-full">
             {isTwinOnline ? (
                 <div className="relative w-full h-full">
-                    <img src="https://storage.googleapis.com/gemini-ui-params/1b92c6b4-4b55-4673-8278-62d3a95f560f" alt="Anatomical model" className="human-img" />
+                    <img src="/assets/digitaltwin.jpeg" alt="Anatomical model" className="human-img" />
                     {diagnosticData.map(point => <DataHotspot key={point.metricName} point={point} />)}
                 </div>
             ) : (
                 <div className="relative w-full h-full">
-                    <img src="https://storage.googleapis.com/gemini-ui-params/1b92c6b4-4b55-4673-8278-62d3a95f560f" alt="Anatomical model" className="human-img filter grayscale opacity-30" />
+                    <img src="/assets/digitaltwin.jpeg" alt="Anatomical model" className="human-img filter grayscale opacity-30" />
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10">
                         <h3 className="font-hud text-2xl font-bold text-cyan-300 tracking-widest">TWIN OFFLINE // NO DATASTREAM</h3>
                         <p className="text-gray-400 mt-2 max-w-xs">Activate diagnostic modules to initialize biological snapshot.</p>

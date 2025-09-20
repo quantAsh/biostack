@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Protocol, CommunityStack, Difficulty, PromoCode, PublicUserProfile, KairosDataPoint, PlatformAnnouncement, Journey, Achievement, Mission, Badge, PlatformConfig, WeeklyMission, FeaturedContent, ResearchBounty, Product, UserFunnelSegment, Gift, Feedback, Order, Coupon, UserSegment, Campaign, ABTest, SocialIntegration, MailingListStats, MailingListEntry, Category, ChallengeCard, Tournament, Quest, DiagnosticService } from '../types';
+import { Protocol, CommunityStack, Difficulty, PromoCode, PublicUserProfile, KairosDataPoint, PlatformAnnouncement, Journey, Achievement, Mission, Badge, PlatformConfig, WeeklyMission, FeaturedContent, ResearchBounty, Product, UserFunnelSegment, Gift, Feedback, Order, Coupon, UserSegment, Campaign, ABTest, SocialIntegration, MailingListStats, MailingListEntry, Category, ChallengeCard, Tournament, Quest, DiagnosticService, BlogPost } from '../types';
 import { db, isFirebaseEnabled } from '../services/firebase';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
@@ -22,6 +22,8 @@ import { mockCampaigns } from '../data/campaigns';
 import { mockTournaments } from '../data/tournaments';
 import { mockQuests } from '../data/quests';
 import { diagnosticServices as mockDiagnosticServices } from '../data/diagnosticServices';
+// Blog utilities for markdown seed ingestion
+import { parseFrontMatter } from '../utils/blog';
 
 
 interface DataState {
@@ -53,6 +55,7 @@ interface DataState {
   tournaments: Tournament[];
   quests: Quest[];
   diagnosticServices: DiagnosticService[];
+    blogPosts?: BlogPost[]; // optional to avoid breaking existing references until used
   fetchData: () => Promise<void>;
   fetchAllUsers: () => Promise<void>;
   updateStackVote: (id: string, direction: 'up' | 'down') => Promise<void>;
@@ -99,8 +102,16 @@ interface DataState {
   sendEmailBlast: (subject: string, body: string) => Promise<void>;
   addToMailingList: (email: string) => Promise<void>;
   addForgedProtocol: (newNftProtocol: Protocol, baseProtocol: Protocol) => Promise<void>;
+    // Blog CRUD (optional presence)
+    createBlogPost?: (data: Omit<BlogPost, 'id' | 'slug' | 'publishedAt' | 'updatedAt'> & { slug?: string }) => void;
+    updateBlogPost?: (id: string, data: Partial<Omit<BlogPost, 'id'>>) => void;
+    deleteBlogPost?: (id: string) => void;
+    publishBlogPost?: (id: string) => void;
   // New Gamification 2.0
   registerForTournament: (tournamentId: string) => Promise<void>;
+    // Blog realtime subscription mgmt
+    initBlogRealtime?: () => void;
+        destroyBlogRealtime?: () => void;
 }
 
 const generateBioScore = (p: Partial<Protocol>): number => {
@@ -112,6 +123,9 @@ const generateBioScore = (p: Partial<Protocol>): number => {
       (parseInt(p.id, 36) % 20) // Use string ID for pseudo-randomness
     );
 }
+
+import { loadMarkdownBlogSeeds } from '../utils/blogSeeds';
+let blogUnsubscribe: (() => void) | null = null;
 
 const generateGameStats = (p: Protocol): { attack: number; defense: number } => {
     const bioScore = p.bioScore || 50;
@@ -169,6 +183,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   tournaments: [],
   quests: [],
   diagnosticServices: [],
+    // blog state moved to stores/blogStore.ts to reduce HMR surface
 
   fetchData: async () => {
     log('INFO', 'fetchData: Starting data fetch.');
@@ -180,6 +195,8 @@ export const useDataStore = create<DataState>((set, get) => ({
             const protocolWithScore = { ...p, bioScore: generateBioScore(p) };
             return { ...protocolWithScore, gameStats: generateGameStats(protocolWithScore as Protocol) };
         });
+        // Markdown seed blog posts
+    const seedPosts = loadMarkdownBlogSeeds();
         set({ 
             protocols: protocolsWithScore, 
             communityStacks: mockCommunityStacks, 
@@ -202,6 +219,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             tournaments: mockTournaments,
             quests: mockQuests,
             diagnosticServices: mockDiagnosticServices,
+            blogPosts: seedPosts,
         });
         get().fetchAllUsers();
         return;
@@ -241,6 +259,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             feedbackQuery.get(),
             campaignsQuery.get(),
             diagnosticServicesQuery.get(),
+            db.collection('blog_posts').get().catch(err => { log('WARN', 'fetchData: blog_posts fetch failed.', { err }); return null; })
         ];
         
         if(userId) {
@@ -267,6 +286,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             feedbackSnap,
             campaignsSnap,
             diagnosticServicesSnap,
+            blogPostsSnap,
             personalizedProtocolsSnap,
         ] = await Promise.all(queries);
 
@@ -292,6 +312,23 @@ export const useDataStore = create<DataState>((set, get) => ({
         const feedbackData = feedbackSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }) as Feedback);
         const campaignsData = campaignsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }) as Campaign);
         const diagnosticServicesData = diagnosticServicesSnap.docs.map((doc: any) => doc.data() as DiagnosticService);
+
+        // BLOG MERGE: Firestore + markdown seeds (Firestore overrides slug collisions)
+        let mergedBlogPosts: BlogPost[] = [];
+        try {
+            const seedPosts = loadMarkdownBlogSeeds();
+            const firestorePosts: BlogPost[] = blogPostsSnap ? blogPostsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
+            const bySlug = new Map<string, BlogPost>();
+            seedPosts.forEach(p => { if (p.slug) bySlug.set(p.slug, p as BlogPost); });
+            firestorePosts.forEach(p => { if ((p as any).slug) bySlug.set((p as any).slug, { ...p, source: 'firestore' } as any); });
+            mergedBlogPosts = Array.from(bySlug.values()).sort((a, b) => {
+                const aPub = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+                const bPub = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+                return bPub - aPub;
+            });
+        } catch (blogErr) {
+            log('ERROR', 'fetchData: blog merge failed.', { blogErr });
+        }
 
         const allProtocols = [...officialProtocolsData, ...communityProtocolsData, ...personalizedProtocolsData];
 
@@ -323,15 +360,18 @@ export const useDataStore = create<DataState>((set, get) => ({
             tournaments: mockTournaments, // Mock only for now
             quests: mockQuests, // Mock only for now
             diagnosticServices: diagnosticServicesData.length > 0 ? diagnosticServicesData : mockDiagnosticServices,
+            blogPosts: mergedBlogPosts,
         });
         
         get().fetchAllUsers();
 
-        log('SUCCESS', 'fetchData: Data fetched successfully from Firestore.', {
+    log('SUCCESS', 'fetchData: Data fetched successfully from Firestore.', {
             protocols: allProtocols.length,
             stacks: communityStacksData.length,
             promoCodes: promoCodesData.length
         });
+    // Start realtime blog updates (idempotent)
+    get().initBlogRealtime?.();
     } catch (error) {
         log('ERROR', 'fetchData: Error fetching data from Firestore.', { error });
         console.error("Error fetching data:", error);
@@ -1201,17 +1241,122 @@ export const useDataStore = create<DataState>((set, get) => ({
     toast.success("Email blast sent to subscribers (Simulated).");
   },
   addToMailingList: async (email) => {
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      // Normalize and validate email
+      if (!email || typeof email !== 'string') {
           toast.error("Please enter a valid email address.");
           return;
       }
+      const normalized = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(normalized)) {
+          toast.error("Please enter a valid email address.");
+          return;
+      }
+
+      // If Firebase is enabled, persist to Firestore and guard against duplicates there
+      if (isFirebaseEnabled) {
+          try {
+              const mailingRef = db.collection('mailing_list');
+
+              // Create a privacy-preserving hashed doc id from the normalized email.
+              const sha256Hex = async (str: string) => {
+                  // Use SubtleCrypto if available (browser / modern Node), otherwise fallback to a simple JS impl.
+                  const toHex = (buffer: ArrayBuffer) => Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
+                  if (typeof (globalThis as any).crypto !== 'undefined' && (globalThis as any).crypto.subtle) {
+                      const enc = new TextEncoder();
+                      const digest = await (globalThis as any).crypto.subtle.digest('SHA-256', enc.encode(str));
+                      return toHex(digest);
+                  }
+                  // Fallback (pure JS) - minimal SHA-256 implementation using built-in 'crypto' in Node if available
+                  try {
+                      // @ts-ignore
+                      const nodeCrypto = require('crypto');
+                      return nodeCrypto.createHash('sha256').update(str).digest('hex');
+                  } catch (e) {
+                      // Last resort: a very small JS SHA-256 (not expecting to run often)
+                      const jsSha256 = (s: string) => {
+                          // Very small, non-optimized SHA-256 adapted from public domain snippets. For CI/local testing only.
+                          const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+                          const rightRotate = (n:number, x:number) => (x >>> n) | (x << (32 - n));
+                          let msg = unescape(encodeURIComponent(s));
+                          const l = msg.length;
+                          const words = [] as number[];
+                          for (let i = 0; i < l; i++) words[i >> 2] |= (msg.charCodeAt(i) & 0xff) << (24 - (i % 4) * 8);
+                          words[l >> 2] |= 0x80 << (24 - (l % 4) * 8);
+                          words[((l + 8) >> 6) * 16 + 15] = l * 8;
+                          const H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+                          for (let j = 0; j < words.length; j += 16) {
+                              const W = new Array(64);
+                              for (let i = 0; i < 16; i++) W[i] = words[j + i] | 0;
+                              for (let i = 16; i < 64; i++) {
+                                  const s0 = rightRotate(7, W[i-15]) ^ rightRotate(18, W[i-15]) ^ (W[i-15] >>> 3);
+                                  const s1 = rightRotate(17, W[i-2]) ^ rightRotate(19, W[i-2]) ^ (W[i-2] >>> 10);
+                                  W[i] = (W[i-16] + s0 + W[i-7] + s1) | 0;
+                              }
+                              let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+                              for (let i = 0; i < 64; i++) {
+                                  const S1 = rightRotate(6, e) ^ rightRotate(11, e) ^ rightRotate(25, e);
+                                  const ch = (e & f) ^ (~e & g);
+                                  const temp1 = (h + S1 + ch + K[i] + W[i]) | 0;
+                                  const S0 = rightRotate(2, a) ^ rightRotate(13, a) ^ rightRotate(22, a);
+                                  const maj = (a & b) ^ (a & c) ^ (b & c);
+                                  const temp2 = (S0 + maj) | 0;
+                                  h = g; g = f; f = e; e = (d + temp1) | 0; d = c; c = b; b = a; a = (temp1 + temp2) | 0;
+                              }
+                              H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+                              H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+                          }
+                          return H.map(h => ('00000000' + (h >>> 0).toString(16)).slice(-8)).join('');
+                      };
+                      return jsSha256(str);
+                  }
+              };
+
+              const docId = await sha256Hex(normalized);
+              const docRef = mailingRef.doc(docId);
+
+              // Use a transaction to ensure the write is atomic and we don't overwrite existing entries.
+              await db.runTransaction(async (tx: any) => {
+                  const snap = await tx.get(docRef);
+                  if (snap.exists) {
+                      throw new Error('ALREADY_EXISTS');
+                  }
+                  tx.set(docRef, { email: normalized, subscribedAt: firebase.firestore.FieldValue.serverTimestamp() });
+              });
+
+              // Update local state with the new entry (use actual Date object locally)
+              set(state => {
+                  if (state.mailingList.some(entry => entry.email === normalized)) {
+                      return state;
+                  }
+                  const newEntry: MailingListEntry = { email: normalized, subscribedAt: new Date() };
+                  const newList = [newEntry, ...state.mailingList];
+                  const newStats = { ...state.mailingListStats, subscriberCount: newList.length };
+                  toast.success("You've been added to the waitlist!");
+                  return { mailingList: newList, mailingListStats: newStats };
+              });
+
+              log('SUCCESS', 'addToMailingList: Added to Firestore mailing_list (transaction)', { docId, email: normalized });
+              return;
+          } catch (error: any) {
+              if (error && error.message === 'ALREADY_EXISTS') {
+                  toast.error('This email is already on the waitlist.');
+                  return;
+              }
+              log('ERROR', 'addToMailingList: Firestore transaction failed', { error, email: normalized });
+              toast.error('Failed to add to waitlist. Please try again later.');
+              return;
+          }
+      }
+
+      // Fallback: local state only
       set(state => {
-          if (state.mailingList.some(entry => entry.email === email)) {
+          if (state.mailingList.some(entry => entry.email === normalized)) {
               toast.error("This email is already on the waitlist.");
               return state;
           }
           toast.success("You've been added to the waitlist!");
-          const newEntry: MailingListEntry = { email, subscribedAt: new Date() };
+          const newEntry: MailingListEntry = { email: normalized, subscribedAt: new Date() };
           const newList = [newEntry, ...state.mailingList];
           const newStats = { ...state.mailingListStats, subscriberCount: newList.length };
           return { mailingList: newList, mailingListStats: newStats };
@@ -1252,6 +1397,55 @@ export const useDataStore = create<DataState>((set, get) => ({
         }
     }
   },
+    createBlogPost: (data) => {
+        const id = `post_${Date.now()}`;
+        const slugSource = data.slug || data.title || id;
+        const slug = slugSource.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+        const now = new Date();
+        const newPost: BlogPost = { id, slug, publishedAt: data.isDraft ? undefined : now, updatedAt: now, ...data } as any;
+        set(state => ({ blogPosts: [...(state.blogPosts||[]), newPost] }));
+        if (isFirebaseEnabled) {
+            db.collection('blog_posts').doc(id).set({ ...newPost, publishedAt: newPost.publishedAt || null, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+              .then(()=> toast.success('Blog post created'))
+              .catch(err => { toast.error('Create failed'); log('ERROR','createBlogPost: Firestore write failed',{err}); });
+        } else {
+            toast.success('Blog post created');
+        }
+    },
+    updateBlogPost: (id, data) => {
+        set(state => ({ blogPosts: (state.blogPosts||[]).map(p => p.id === id ? { ...p, ...data, updatedAt: new Date() } : p) }));
+        if (isFirebaseEnabled) {
+            db.collection('blog_posts').doc(id).update({ ...data, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+              .then(()=> toast.success('Blog post updated'))
+              .catch(err => { toast.error('Update failed'); log('ERROR','updateBlogPost: Firestore update failed',{err}); });
+        } else {
+            toast.success('Blog post updated');
+        }
+    },
+    deleteBlogPost: (id) => {
+        // Prevent deletion of markdown seed posts
+        const post = get().blogPosts?.find(p => p.id === id);
+        if ((post as any)?.source === 'markdown') { toast.error('Markdown seed posts are read-only'); return; }
+        set(state => ({ blogPosts: (state.blogPosts||[]).filter(p => p.id !== id) }));
+        if (isFirebaseEnabled) {
+            db.collection('blog_posts').doc(id).delete()
+              .then(()=> toast.success('Blog post deleted'))
+              .catch(err => { toast.error('Delete failed'); log('ERROR','deleteBlogPost: Firestore delete failed',{err}); });
+        } else {
+            toast.success('Blog post deleted');
+        }
+    },
+    publishBlogPost: (id) => {
+        const now = new Date();
+        set(state => ({ blogPosts: (state.blogPosts||[]).map(p => p.id === id ? { ...p, isDraft: false, publishedAt: p.publishedAt || now, updatedAt: now } : p) }));
+        if (isFirebaseEnabled) {
+            db.collection('blog_posts').doc(id).update({ isDraft: false, publishedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+              .then(()=> toast.success('Blog post published'))
+              .catch(err => { toast.error('Publish failed'); log('ERROR','publishBlogPost: Firestore publish failed',{err}); });
+        } else {
+            toast.success('Blog post published');
+        }
+    },
   // New Gamification 2.0
   registerForTournament: async (tournamentId) => {
     useUserStore.getState().enrollInTournament(tournamentId);

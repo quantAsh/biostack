@@ -7,7 +7,7 @@ const LoadingScreen: React.FC = () => {
       <div className="flex items-center space-x-4 mb-4">
         <Logo className="text-gray-200 w-10 h-10" />
         <h1 className="font-title text-5xl font-extrabold text-gray-100 tracking-tighter">
-          BiohackStack
+          biostack
         </h1>
       </div>
       <div className="flex items-center gap-2 text-cyan-300">

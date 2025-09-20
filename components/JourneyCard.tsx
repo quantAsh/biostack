@@ -159,7 +159,9 @@ const JourneyCard: React.FC<JourneyCardProps> = ({ journey, isActiveInStack, isM
     const difficulties = journeyProtocols.map(p => p.difficulty);
     const uniqueDifficulties = [...new Set(difficulties)];
     
-    const sortedDifficulties = uniqueDifficulties.sort((a, b) => difficultyOrder[a] - difficultyOrder[b]);
+    // Ensure TypeScript knows these are Difficulty values before using them as index keys
+    const uniqueDifficultiesTyped = uniqueDifficulties as Difficulty[];
+    const sortedDifficulties = uniqueDifficultiesTyped.sort((a, b) => difficultyOrder[a] - difficultyOrder[b]);
     
     const difficultyRange = sortedDifficulties.length > 1 
         ? `${sortedDifficulties[0]} to ${sortedDifficulties[sortedDifficulties.length - 1]}`

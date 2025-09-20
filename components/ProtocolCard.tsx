@@ -56,8 +56,18 @@ const ProtocolCard: React.FC<ProtocolCardProps> = ({ protocol, isFullScreen = fa
     </div>
   );
   
+  // Map known protocol types to asset images (can expand later)
+  const protocolImage = (() => {
+    const name = (protocol.name || '').toLowerCase();
+    const cats = (protocol.categories || []).toString().toLowerCase();
+    if (name.includes('anatom') || cats.includes('anatom') || protocol.id === 'anatomical-model') {
+      return '/assets/digitaltwin.jpeg';
+    }
+    return (protocol as any).imageUrl || undefined;
+  })();
+
   const renderContent = (isBack = false) => {
-    const props = { protocol, isBack, isOwnedNft, onMobileAction };
+    const props = { protocol: { ...protocol, imageUrl: protocolImage }, isBack, isOwnedNft, onMobileAction } as any;
     if (isSpecialEdition || isOwnedNft) {
       return <HeroCard {...props} />;
     }

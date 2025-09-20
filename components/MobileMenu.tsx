@@ -30,9 +30,9 @@ const MobileMenu: React.FC = () => {
             <div className={`mobile-menu-panel ${isMobileMenuOpen ? 'open' : ''}`}>
                 <div className="flex items-center space-x-3 mb-8">
                     <Logo className="text-gray-200" />
-                    <h1 className="font-title text-2xl font-extrabold text-gray-100 tracking-tighter">
-                      BiohackStack
-                    </h1>
+                                        <h1 className="font-title text-2xl font-extrabold text-gray-100 tracking-tighter">
+                                            biostack
+                                        </h1>
                 </div>
                 
                 <div className="flex-grow space-y-2">

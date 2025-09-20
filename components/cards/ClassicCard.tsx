@@ -62,10 +62,12 @@ const ClassicCard: React.FC<CardContentProps> = ({ protocol, isBack = false, onM
     }
   };
 
+  const wantsDigitalHuman = protocol.theme === 'digital-human' || (Array.isArray(protocol.categories) && protocol.categories.some(c => /anatom/i.test(c)));
+
   return (
     <div data-category={protocol.categories[0]} className={`card-inner relative w-full h-full rounded-2xl overflow-hidden bg-gray-900 border border-gray-700/50 noise-bg ${isPoweringUp ? 'power-up' : ''}`} style={{'--card-color-1': primaryColor, '--card-color-2': secondaryColor, '--card-color-3': tertiaryColor} as React.CSSProperties}>
         <div className="absolute inset-0 pointer-events-none">
-            <CardGraphic protocol={protocol} theme="classic" />
+            <CardGraphic protocol={protocol} theme={wantsDigitalHuman ? 'digital-human' : 'classic'} />
             <div className={`absolute -inset-px rounded-2xl ${isInStack ? 'ring-2' : 'ring-0'} ring-[var(--card-color-1)] transition-all duration-300`}></div>
             <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10"></div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
