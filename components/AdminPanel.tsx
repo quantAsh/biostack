@@ -18,6 +18,52 @@ import ABTestModal from './ABTestModal';
 import { useUIStore } from '../stores/uiStore';
 import AdminLaunchCopilot from './AdminLaunchCopilot';
 
+// Module-level diagnostic: when the AdminPanel module is executed, set a global flag
+// if tests opted in via window.__E2E__ or in dev mode. This helps distinguish
+// "file fetched by the browser" vs "module actually executed" in E2E runs.
+try {
+    if (typeof window !== 'undefined') {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        if ((window as any).__E2E__ === true || import.meta.env?.DEV) {
+            try { (window as any).__ADMIN_PANEL_MODULE_LOADED__ = true; } catch (e) {}
+        }
+    }
+} catch (e) {}
+
+// If __E2E__ was not present at module evaluation time the test may set it shortly after.
+// Add a short-lived, guarded poll to catch that case and set the module flag so tests
+// can still detect module execution even when __E2E__ is applied slightly later.
+try {
+    if (typeof window !== 'undefined') {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        if (!(window as any).__ADMIN_PANEL_MODULE_LOADED__) {
+            try {
+                let waited = 0;
+                const interval = 50;
+                const maxWait = 500; // ms
+                const t = setInterval(() => {
+                    try {
+                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                        // @ts-ignore
+                        if ((window as any).__E2E__ === true) {
+                            try { (window as any).__ADMIN_PANEL_MODULE_LOADED__ = true; } catch (e) {}
+                            clearInterval(t);
+                        }
+                    } catch (err) {
+                        // ignore
+                    }
+                    waited += interval;
+                    if (waited > maxWait) {
+                        try { clearInterval(t); } catch (e) {}
+                    }
+                }, interval);
+            } catch (e) {}
+        }
+    }
+} catch (e) {}
+
 const StatCard: React.FC<{ title: string, value: string | number, icon: React.ReactNode }> = ({ title, value, icon }) => (
     <div className="bg-[#1C2128]/60 p-6 rounded-lg border border-gray-700/50">
         <div className="flex items-center gap-4">
@@ -58,10 +104,20 @@ const UserGrowthChart: React.FC = () => {
 // Dev-only: expose a global flag when AdminPanel mounts so headless tests can detect lazy load
 function markAdminLoaded() {
     try {
-        if (typeof window !== 'undefined' && import.meta.env?.DEV) {
+        if (typeof window !== 'undefined') {
+            // Allow tests to opt-in to mount instrumentation in production by setting
+            // window.__E2E__ = true before app scripts run. Also keep it enabled in
+            // local dev for convenience via import.meta.env.DEV.
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
-            window.__ADMIN_PANEL_LOADED__ = true;
+            if ((window as any).__E2E__ === true || import.meta.env?.DEV) {
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
+                // primary boolean flag
+                window.__ADMIN_PANEL_LOADED__ = true;
+                // additional diagnostic timestamp to help tests detect execution
+                try { (window as any).__ADMIN_PANEL_ATTEMPT__ = Date.now(); } catch (e) {}
+            }
         }
     } catch (e) {
         // ignore
