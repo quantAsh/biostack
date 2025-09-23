@@ -41,6 +41,18 @@ jobs:
           echo "--- find relevant artifacts ---"
           find . -type f -name "*.zip" -o -name "*.webm" -o -name "trace.zip" -o -name "*.log" || true
 
+      - name: Bundle test-results for reliable upload
+        if: always()
+        run: |
+          set -e
+          if [ -d test-results ]; then
+            tar -czf trace-bundle.tar.gz test-results || true
+            echo "Created trace-bundle.tar.gz"
+            ls -la trace-bundle.tar.gz || true
+          else
+            echo 'no test-results dir to bundle'
+          fi
+
       - name: Upload Playwright artifacts
         if: always()
         uses: actions/upload-artifact@v4
