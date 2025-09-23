@@ -21,13 +21,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Playwright
-        uses: microsoft/playwright-github-action@v1
-        # This action installs Playwright and the browser binaries and helps
-        # ensure the environment has the required dependencies on the runner.
-
-      - name: Build and run E2E against production build
+      - name: Install Playwright browsers and system dependencies
+        # Use the Playwright CLI installer which handles browser binaries and
+        # platform-specific dependency installation for supported runners.
         run: |
+          npx playwright install --with-deps
+        env:
+          CI: true
+
+      - name: Build production and run Playwright E2E
+        run: |
+          npm run build
+          # Serve the production build and run playwright against it. e2e:prod
+          # should start the server (or use a serve script) and then run tests.
           npm run e2e:prod
         env:
           CI: true
