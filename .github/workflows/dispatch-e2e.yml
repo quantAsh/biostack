@@ -1,0 +1,57 @@
+name: Dispatch E2E (debug)
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_trace:
+        description: 'Set to 1 to force Playwright trace generation (--trace=on)'
+        required: false
+        default: '0'
+
+jobs:
+  dispatch-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E (prod build) with optional forced trace
+        env:
+          CI: true
+          FORCE_TRACE: ${{ github.event.inputs.force_trace }}
+        run: |
+          npm run e2e:prod
+
+      - name: List test-results (for debug)
+        if: always()
+        run: |
+          echo "--- ls test-results ---"
+          ls -la test-results || true
+          echo "--- find relevant artifacts ---"
+          find . -type f -name "*.zip" -o -name "*.webm" -o -name "trace.zip" -o -name "*.log" || true
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-dispatch-${{ github.run_id }}
+          path: |
+            test-results/**
+            test-results/**/*
+            playwright-report/**
+            test-results/**/*.zip
+            **/trace.zip
+            **/video/**
+            **/*.webm
+            **/*.log
