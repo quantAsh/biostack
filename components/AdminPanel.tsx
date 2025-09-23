@@ -42,7 +42,7 @@ try {
             try {
                 let waited = 0;
                 const interval = 50;
-                const maxWait = 500; // ms
+                const maxWait = 2000; // ms (extended to be more tolerant in slower CI environments)
                 const t = setInterval(() => {
                     try {
                         // eslint-disable-next-line @typescript-eslint/ban-ts-comment

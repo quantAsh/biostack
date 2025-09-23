@@ -21,13 +21,35 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Playwright
-        uses: microsoft/playwright-github-action@v1
-        # This action installs Playwright and the browser binaries and helps
-        # ensure the environment has the required dependencies on the runner.
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+        # Use explicit install to avoid deprecated/OS-specific action behavior.
 
       - name: Build and run E2E against production build
         run: |
           npm run e2e:prod
         env:
           CI: true
+
+      - name: List test-results (for debug)
+        if: always()
+        run: |
+          echo "--- ls test-results ---"
+          ls -la test-results || true
+          echo "--- find relevant artifacts ---"
+          find . -type f -name "*.zip" -o -name "*.webm" -o -name "trace.zip" -o -name "*.log" || true
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-${{ github.run_id }}
+          path: |
+            test-results/**
+            test-results/**/*
+            playwright-report/**
+            test-results/**/*.zip
+            **/trace.zip
+            **/video/**
+            **/*.webm
+            **/*.log
