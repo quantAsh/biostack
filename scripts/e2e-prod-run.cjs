@@ -26,10 +26,16 @@ function waitForPort(port, host, timeout = 10000) {
   const serverScript = path.resolve(__dirname, 'serve-dist.cjs');
   const server = spawn(process.execPath, [serverScript], { stdio: ['ignore', 'inherit', 'inherit'] });
   console.log('spawned server', server.pid);
-  try {
+    try {
     await waitForPort(5173, '127.0.0.1', 10000);
     console.log('server ready');
-    const runner = spawn('npx', ['playwright', 'test', 'tests/e2e/admin-lazy.spec.ts', '-c', 'playwright.config.ts', '-g', 'Admin lazy-load', '--headed', '--retries=1', '--reporter=list', '--trace', 'on-first-retry'], { stdio: 'inherit' });
+    // Build Playwright CLI arguments. In CI we must not start a headed browser (no X server).
+    const args = ['playwright', 'test', 'tests/e2e/admin-lazy.spec.ts', '-c', 'playwright.config.ts', '-g', 'Admin lazy-load', '--retries=1', '--reporter=list', '--trace', 'on-first-retry'];
+    if (!process.env.CI) {
+      // Developers running locally may want a headed browser for debugging.
+      args.splice(4, 0, '--headed');
+    }
+    const runner = spawn('npx', args, { stdio: 'inherit' });
     const code = await new Promise((res) => runner.on('exit', res));
     console.log('playwright exit', code);
     server.kill();
