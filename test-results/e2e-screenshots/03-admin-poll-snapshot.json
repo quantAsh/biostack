@@ -1,10 +1,10 @@
 {
-  "ts": 1758571229921,
+  "ts": 1758591255793,
   "check": {
     "__E2E__": true,
     "__ADMIN_PANEL_LOADED__": true,
     "__ADMIN_PANEL_MODULE_LOADED__": false,
-    "__ADMIN_PANEL_ATTEMPT__": 1758571049235,
+    "__ADMIN_PANEL_ATTEMPT__": 1758591075159,
     "location_hash": "#admin",
     "hasAdminText": false
   }

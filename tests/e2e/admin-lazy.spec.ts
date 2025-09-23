@@ -235,7 +235,7 @@ test.describe('Admin lazy-load', () => {
       }
     }
 
-  // Polling: wait up to 30s for admin panel to mount (either instrumentation global or Admin DOM)
+  // Polling: wait up to 60s for evidence that the Admin chunk executed or mounted.
     const start = Date.now();
     let mounted = false;
   while (Date.now() - start < 60_000) {
@@ -256,7 +256,9 @@ test.describe('Admin lazy-load', () => {
           }
         });
         try { fs.writeFileSync(path.join(SCREEN_DIR, '03-admin-poll-snapshot.json'), JSON.stringify({ ts: Date.now(), check }, null, 2)); } catch (e) {}
-        if (check && (check.__ADMIN_PANEL_LOADED__ || check.hasAdminText)) { mounted = true; break; }
+  // Prefer the module-level flag as the primary success signal (faster and less UI-dependent).
+  // If the module executed but the component hasn't mounted yet, accept module execution as success.
+  if (check && (check.__ADMIN_PANEL_MODULE_LOADED__ || check.__ADMIN_PANEL_LOADED__ || check.hasAdminText)) { mounted = true; break; }
   } catch (pollErr) {}
       await new Promise(r => setTimeout(r, 500));
     }
@@ -315,7 +317,13 @@ test.describe('Admin lazy-load', () => {
   const adminModuleFlag = await page.evaluate(() => { try { return Boolean((window as any).__ADMIN_PANEL_MODULE_LOADED__); } catch (e) { return false; } });
   try { fs.writeFileSync(path.join(SCREEN_DIR, '03-admin-module-flag.txt'), String(adminModuleFlag)); } catch (e) {}
 
-  // Assert that either the instrumentation flag, module-level flag, or a key Admin DOM node is present.
-  expect(adminFlag || hasAdminText || adminModuleFlag).toBe(true);
+  // Prefer module-level evidence as the primary success signal in CI; fall back to mount flag or DOM.
+  if (!adminModuleFlag) {
+    // If module flag wasn't set, require either the mount flag or the Admin DOM node to be present.
+    expect(adminFlag || hasAdminText).toBe(true);
+  } else {
+    // Module flag present -> success
+    expect(adminModuleFlag).toBe(true);
+  }
   });
 });

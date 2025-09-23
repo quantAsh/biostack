@@ -16,9 +16,10 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     actionTimeout: 10_000,
     navigationTimeout: 30_000,
-  trace: 'on',
-  screenshot: 'off',
-  video: 'on',
+    // Keep traces only on failure to reduce noise but ensure trace.zip exists when tests fail.
+    trace: process.env.CI ? 'retain-on-failure' : 'on',
+    screenshot: 'off',
+    video: 'on',
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
