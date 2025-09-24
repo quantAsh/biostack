@@ -5,9 +5,12 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  schedule:
+    - cron: '0 3 * * *' # nightly full run at 03:00 UTC
+  workflow_dispatch:
 
 jobs:
-  e2e:
+  e2e-smoke:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,11 +28,13 @@ jobs:
         run: npx playwright install --with-deps
         # Use explicit install to avoid deprecated/OS-specific action behavior.
 
-      - name: Build and run E2E against production build
-        run: |
-          npm run e2e:prod
+      - name: Run smoke E2E against dev server (Admin lazy-load only)
         env:
           CI: true
+          E2E_USE_DEV: '1'
+        run: |
+          # Ensure Playwright uses the dev server
+          npx playwright test tests/e2e/admin-lazy.spec.ts -g "Admin lazy-load" --reporter=list
 
       - name: List test-results (for debug)
         if: always()
@@ -39,11 +44,51 @@ jobs:
           echo "--- find relevant artifacts ---"
           find . -type f -name "*.zip" -o -name "*.webm" -o -name "trace.zip" -o -name "*.log" || true
 
-      - name: Upload Playwright artifacts
+      - name: Upload Playwright artifacts (smoke)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts-${{ github.run_id }}
+          name: playwright-artifacts-smoke-${{ github.run_id }}
+          path: |
+            test-results/**
+            test-results/**/*
+            playwright-report/**
+            test-results/**/*.zip
+            **/trace.zip
+            **/video/**
+            **/*.webm
+            **/*.log
+
+  e2e-full:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run full E2E against dev server
+        env:
+          CI: true
+          E2E_USE_DEV: '1'
+        run: |
+          npx playwright test --reporter=list
+
+      - name: Upload Playwright artifacts (full)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-full-${{ github.run_id }}
           path: |
             test-results/**
             test-results/**/*

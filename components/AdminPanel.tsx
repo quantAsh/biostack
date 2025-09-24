@@ -27,6 +27,13 @@ try {
         // @ts-ignore
         if ((window as any).__E2E__ === true || import.meta.env?.DEV) {
             try { (window as any).__ADMIN_PANEL_MODULE_LOADED__ = true; } catch (e) {}
+            try {
+                // Visible, guarded console marker to make the module execution easy to find
+                // inside Playwright traces (search for "[E2E] ADMIN MODULE LOADED").
+                // Only log when tests opted in or in dev to avoid noise in production.
+                // eslint-disable-next-line no-console
+                console.info('[E2E] ADMIN MODULE LOADED');
+            } catch (e) {}
         }
     }
 } catch (e) {}
@@ -115,6 +122,12 @@ function markAdminLoaded() {
                 // @ts-ignore
                 // primary boolean flag
                 window.__ADMIN_PANEL_LOADED__ = true;
+                try {
+                    // Guarded console marker for component mount — searchable in Playwright traces
+                    // (search for "[E2E] ADMIN MOUNTED"). Only logs when tests opt-in or in dev.
+                    // eslint-disable-next-line no-console
+                    console.info('[E2E] ADMIN MOUNTED');
+                } catch (e) {}
                 // additional diagnostic timestamp to help tests detect execution
                 try { (window as any).__ADMIN_PANEL_ATTEMPT__ = Date.now(); } catch (e) {}
             }

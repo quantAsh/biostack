@@ -9,6 +9,8 @@ import PublishStackModal from './components/PublishStackModal';
 import SubmitProtocolModal from './components/SubmitProtocolModal';
 import UpgradeModal from './components/UpgradeModal';
 import LoadingScreen from './components/LoadingScreen';
+import ErrorBoundary from './components/ErrorBoundary';
+import ChunkLoader from './components/ChunkLoader';
 import AuthModal from './components/AuthModal';
 const LazyAdminPanel = React.lazy(() => import('./components/AdminPanel'));
 import UserProfileModal from './components/UserProfileModal';
@@ -150,9 +152,11 @@ const App: React.FC = () => {
             case 'arena': return <ArenaPanel />;
             case 'settings': return <SettingsPanel />;
             case 'admin': return (
-                <React.Suspense fallback={<LoadingScreen />}>
-                  <LazyAdminPanel />
-                </React.Suspense>
+        <ErrorBoundary>
+                  <React.Suspense fallback={<LoadingScreen />}>
+          <ChunkLoader loader={() => import('./components/AdminPanel')} fallback={<LoadingScreen />} metricKey="admin-panel" />
+                  </React.Suspense>
+                </ErrorBoundary>
             );
             default: return <MobileExploreView />; // Default to explore on mobile
         }
@@ -173,9 +177,11 @@ const App: React.FC = () => {
       return <SettingsPanel />;
     case 'admin':
       return (
-        <React.Suspense fallback={<LoadingScreen />}>
-          <LazyAdminPanel />
-        </React.Suspense>
+        <ErrorBoundary>
+          <React.Suspense fallback={<LoadingScreen />}>
+            <ChunkLoader loader={() => import('./components/AdminPanel')} fallback={<LoadingScreen />} metricKey="admin-panel" />
+          </React.Suspense>
+        </ErrorBoundary>
       );
         default:
             return null;
