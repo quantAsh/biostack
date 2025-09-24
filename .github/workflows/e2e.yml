@@ -28,10 +28,23 @@ jobs:
         run: npx playwright install --with-deps
         # Use explicit install to avoid deprecated/OS-specific action behavior.
 
+      - name: Start dev server (background)
+        run: |
+          nohup bash -lc 'HOST=127.0.0.1 PORT=5173 npm run dev:ci' > vite.log 2>&1 &
+          echo $! > vite.pid
+          echo "Started dev server PID: $(cat vite.pid)"
+          # Wait for server to respond
+          for i in {1..60}; do
+            if curl -sSf http://127.0.0.1:5173 > /dev/null; then echo "Dev server ready"; break; fi
+            echo "waiting for dev server... $i"
+            sleep 1
+          done
+
       - name: Run smoke E2E against dev server (Admin lazy-load only)
         env:
           CI: true
           E2E_USE_DEV: '1'
+          FORCE_TRACE: '1'
         run: |
           # Ensure Playwright uses the dev server
           npx playwright test tests/e2e/admin-lazy.spec.ts -g "Admin lazy-load" --reporter=list
@@ -43,6 +56,11 @@ jobs:
           ls -la test-results || true
           echo "--- find relevant artifacts ---"
           find . -type f -name "*.zip" -o -name "*.webm" -o -name "trace.zip" -o -name "*.log" || true
+
+      - name: Stop dev server
+        if: always()
+        run: |
+          if [ -f vite.pid ]; then kill $(cat vite.pid) || true; fi
 
       - name: Upload Playwright artifacts (smoke)
         if: always()
@@ -58,6 +76,7 @@ jobs:
             **/video/**
             **/*.webm
             **/*.log
+            vite.log
 
   e2e-full:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -77,12 +96,29 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Start dev server (background)
+        run: |
+          nohup bash -lc 'HOST=127.0.0.1 PORT=5173 npm run dev:ci' > vite.log 2>&1 &
+          echo $! > vite.pid
+          echo "Started dev server PID: $(cat vite.pid)"
+          for i in {1..60}; do
+            if curl -sSf http://127.0.0.1:5173 > /dev/null; then echo "Dev server ready"; break; fi
+            echo "waiting for dev server... $i"
+            sleep 1
+          done
+
       - name: Run full E2E against dev server
         env:
           CI: true
           E2E_USE_DEV: '1'
+          FORCE_TRACE: '1'
         run: |
           npx playwright test --reporter=list
+
+      - name: Stop dev server
+        if: always()
+        run: |
+          if [ -f vite.pid ]; then kill $(cat vite.pid) || true; fi
 
       - name: Upload Playwright artifacts (full)
         if: always()
@@ -98,3 +134,4 @@ jobs:
             **/video/**
             **/*.webm
             **/*.log
+            vite.log
